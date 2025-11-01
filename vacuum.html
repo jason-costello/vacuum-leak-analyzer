@@ -1,0 +1,621 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vacuum Leak Analyzer</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+
+    .container {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      color: #333;
+      border-bottom: 2px solid #007bff;
+      padding-bottom: 10px;
+      margin-top: 0;
+    }
+
+    h2 {
+      color: #555;
+      margin-top: 15px;
+      margin-bottom: 10px;
+      font-size: 1.1em;
+    }
+
+    .input-group {
+      margin-bottom: 10px;
+    }
+
+    label {
+      display: inline-block;
+      width: 200px;
+      font-weight: bold;
+      color: #555;
+      font-size: 14px;
+    }
+
+    input[type="number"],
+    input[type="file"],
+    select {
+      padding: 5px 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    input[type="number"] {
+      width: 100px;
+    }
+
+    select {
+      width: 200px;
+    }
+
+    button {
+      background-color: #007bff;
+      color: white;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-right: 10px;
+      margin-top: 5px;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+
+    #results {
+      white-space: pre-wrap;
+      font-family: "Courier New", monospace;
+      background-color: #f8f9fa;
+      padding: 15px;
+      border-radius: 4px;
+      border: 1px solid #dee2e6;
+      margin-bottom: 20px;
+      min-height: 200px;
+    }
+
+    #resultsContainer {
+      display: none;
+    }
+
+    #debugArea {
+      white-space: pre-wrap;
+      font-family: "Courier New", monospace;
+      background-color: #fff3cd;
+      padding: 15px;
+      border-radius: 4px;
+      border: 1px solid #ffc107;
+      margin-top: 20px;
+      display: none;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    #mappingSection {
+      display: none;
+      background-color: #d1ecf1;
+      padding: 15px;
+      border-radius: 4px;
+      border: 1px solid #17a2b8;
+      margin: 15px 0;
+    }
+
+    .mapping-row {
+      margin-bottom: 10px;
+    }
+
+    .mapping-label {
+      display: inline-block;
+      width: 150px;
+      font-weight: bold;
+    }
+
+    .success {
+      color: #28a745;
+      font-weight: bold;
+    }
+
+    .error {
+      color: #dc3545;
+      font-weight: bold;
+    }
+
+    .warning {
+      color: #ffc107;
+      font-weight: bold;
+    }
+
+    .checkbox-group {
+      margin: 10px 0;
+    }
+
+    input[type="checkbox"] {
+      margin-right: 5px;
+    }
+
+    .controls-section {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-top: 15px;
+    }
+
+    .control-column {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .button-group {
+      margin-top: 10px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>Vacuum Leak Analyzer</h1>
+
+    <!-- Results Section (appears at top when available) -->
+    <div id="resultsContainer">
+      <h2>Analysis Results</h2>
+      <div id="results"></div>
+    </div>
+
+    <!-- Controls Section -->
+    <h2>Select Data File</h2>
+    <div class="input-group">
+      <input type="file" id="fileInput" accept=".csv,.txt" onchange="loadFile()" />
+    </div>
+
+    <div id="mappingSection">
+      <h3>Map Required Headers</h3>
+      <p>Please map the required columns to your file's headers:</p>
+      <div id="mappingContainer"></div>
+      <button onclick="applyMapping()">Apply Mapping</button>
+      <button onclick="cancelMapping()">Cancel</button>
+    </div>
+
+    <div class="controls-section">
+      <div class="control-column">
+        <h2>Idle Configuration</h2>
+        <div class="input-group">
+          <label>Idle RPM:</label>
+          <input type="number" id="idleRPM" value="600" min="0" max="2000" />
+        </div>
+        <div class="input-group">
+          <label>Idle Tolerance (±RPM):</label>
+          <input type="number" id="idleTolerance" value="100" min="0" max="500" />
+        </div>
+      </div>
+
+      <div class="control-column">
+        <h2>High RPM Configuration</h2>
+        <div class="input-group">
+          <label>High RPM:</label>
+          <input type="number" id="highRPM" value="3500" min="0" max="10000" />
+        </div>
+        <div class="input-group">
+          <label>High RPM Tolerance (±RPM):</label>
+          <input type="number" id="highTolerance" value="100" min="0" max="1000" />
+        </div>
+      </div>
+    </div>
+
+    <div class="input-group">
+      <label>Leak Threshold (%):</label>
+      <input type="number" id="threshold" value="15" min="1" max="100" />
+    </div>
+
+    <div class="checkbox-group">
+      <label>
+        <input type="checkbox" id="debugMode" onchange="toggleDebug()" />
+        Show Debug Information
+      </label>
+    </div>
+
+    <div class="button-group">
+      <button id="analyzeBtn" onclick="analyze()" disabled>
+        Analyze Data
+      </button>
+      <button onclick="clearResults()">Clear Results</button>
+    </div>
+
+    <div id="debugArea"></div>
+  </div>
+
+  <script>
+    let csvData = [];
+    let headers = [];
+    let headerMapping = {};
+    let debugLog = [];
+
+    function log(message, isError = false) {
+      debugLog.push(message);
+      const debugArea = document.getElementById('debugArea');
+      debugArea.textContent = debugLog.join('\n');
+      if (isError || document.getElementById('debugMode').checked) {
+        debugArea.style.display = 'block';
+      }
+    }
+
+    function toggleDebug() {
+      const debugArea = document.getElementById('debugArea');
+      if (document.getElementById('debugMode').checked && debugLog.length > 0) {
+        debugArea.style.display = 'block';
+      } else if (!document.getElementById('debugMode').checked) {
+        debugArea.style.display = 'none';
+      }
+    }
+
+    function clearResults() {
+      document.getElementById('results').textContent = '';
+      document.getElementById('resultsContainer').style.display = 'none';
+      debugLog = [];
+      document.getElementById('debugArea').textContent = '';
+      document.getElementById('debugArea').style.display = 'none';
+    }
+
+    function detectDelimiter(text) {
+      const firstLine = text.split('\n')[0];
+      if (firstLine.includes(';')) return ';';
+      if (firstLine.includes(',')) return ',';
+      if (firstLine.includes('\t')) return '\t';
+      return ',';
+    }
+
+    function parseCSV(text, delimiter) {
+      const lines = text.trim().split('\n');
+      const result = [];
+
+      headers = lines[0].split(delimiter).map(h => h.trim().replace(/"/g, ''));
+      log(`Found headers: ${headers.join(', ')}`);
+
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(delimiter).map(v => v.trim().replace(/"/g, ''));
+        const row = {};
+        headers.forEach((header, index) => {
+          row[header] = values[index] || '';
+        });
+        result.push(row);
+      }
+
+      return result;
+    }
+
+    function loadFile() {
+      const fileInput = document.getElementById('fileInput');
+      const file = fileInput.files[0];
+
+      if (!file) {
+        return;
+      }
+
+      clearResults();
+      log(`Loading file: ${file.name}`);
+
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const text = e.target.result;
+        const delimiter = detectDelimiter(text);
+        log(`Detected delimiter: "${delimiter}"`);
+
+        csvData = parseCSV(text, delimiter);
+        log(`Loaded ${csvData.length} data rows`);
+
+        const requiredHeaders = {
+          'time': 'time(ms)',
+          'shrtft1': 'SHRTFT1(%)',
+          'shrtft2': 'SHRTFT2(%)',
+          'longft1': 'LONGFT1(%)',
+          'longft2': 'LONGFT2(%)',
+          'rpm': 'RPM(1/min)'
+        };
+
+        headerMapping = {};
+        for (const [key, standard] of Object.entries(requiredHeaders)) {
+          if (headers.includes(standard)) {
+            headerMapping[key] = standard;
+          } else {
+            const found = headers.find(h => {
+              const hLower = h.toLowerCase();
+              if (key === 'time') return hLower.includes('time');
+              if (key === 'rpm') return hLower.includes('rpm');
+              if (key === 'shrtft1') return hLower.includes('shrt') && (hLower.includes('1') || hLower.includes('bank1'));
+              if (key === 'shrtft2') return hLower.includes('shrt') && (hLower.includes('2') || hLower.includes('bank2'));
+              if (key === 'longft1') return hLower.includes('long') && (hLower.includes('1') || hLower.includes('bank1'));
+              if (key === 'longft2') return hLower.includes('long') && (hLower.includes('2') || hLower.includes('bank2'));
+              return false;
+            });
+            if (found) headerMapping[key] = found;
+          }
+        }
+
+        const unmapped = Object.keys(requiredHeaders).filter(key => !headerMapping[key]);
+
+        if (unmapped.length > 0) {
+          log(`Missing required headers: ${unmapped.join(', ')}`, true);
+          showMappingInterface(requiredHeaders);
+        } else {
+          log('All required headers found');
+          document.getElementById('analyzeBtn').disabled = false;
+        }
+      };
+
+      reader.readAsText(file);
+    }
+
+    function showMappingInterface(requiredHeaders) {
+      const mappingContainer = document.getElementById('mappingContainer');
+      mappingContainer.innerHTML = '';
+
+      for (const [key, standard] of Object.entries(requiredHeaders)) {
+        const div = document.createElement('div');
+        div.className = 'mapping-row';
+
+        const label = document.createElement('span');
+        label.className = 'mapping-label';
+        label.textContent = standard + ':';
+
+        const select = document.createElement('select');
+        select.id = `map-${key}`;
+
+        const emptyOption = document.createElement('option');
+        emptyOption.value = '';
+        emptyOption.textContent = '-- Select --';
+        select.appendChild(emptyOption);
+
+        headers.forEach(header => {
+          const option = document.createElement('option');
+          option.value = header;
+          option.textContent = header;
+          if (headerMapping[key] === header) {
+            option.selected = true;
+          }
+          select.appendChild(option);
+        });
+
+        div.appendChild(label);
+        div.appendChild(select);
+        mappingContainer.appendChild(div);
+      }
+
+      document.getElementById('mappingSection').style.display = 'block';
+    }
+
+    function applyMapping() {
+      const requiredKeys = ['time', 'shrtft1', 'shrtft2', 'longft1', 'longft2', 'rpm'];
+      headerMapping = {};
+
+      for (const key of requiredKeys) {
+        const select = document.getElementById(`map-${key}`);
+        if (select && select.value) {
+          headerMapping[key] = select.value;
+        }
+      }
+
+      const unmapped = requiredKeys.filter(key => !headerMapping[key]);
+      if (unmapped.length > 0) {
+        alert(`Please map all required fields. Missing: ${unmapped.join(', ')}`);
+        return;
+      }
+
+      document.getElementById('mappingSection').style.display = 'none';
+      document.getElementById('analyzeBtn').disabled = false;
+      log('Header mapping applied successfully');
+    }
+
+    function cancelMapping() {
+      document.getElementById('mappingSection').style.display = 'none';
+    }
+
+    function findRPMGroup(targetRPM, tolerance, minDurationMs) {
+      log(`\nSearching for ${targetRPM}±${tolerance} RPM group lasting ${minDurationMs}ms+`);
+
+      let currentStart = 0;
+      while (currentStart < csvData.length) {
+        let groupStart = currentStart;
+        let groupEnd = currentStart;
+
+        for (let i = currentStart; i < csvData.length; i++) {
+          const row = csvData[i];
+
+          if (!row[headerMapping.rpm] || !row[headerMapping.time] ||
+            !row[headerMapping.shrtft1] || !row[headerMapping.shrtft2] ||
+            !row[headerMapping.longft1] || !row[headerMapping.longft2]) {
+            log(`Row ${i}: Missing required data, breaking sequence`);
+            currentStart = i + 1;
+            break;
+          }
+
+          const rpm = parseFloat(row[headerMapping.rpm]);
+          if (isNaN(rpm)) {
+            log(`Row ${i}: Invalid RPM value, breaking sequence`);
+            currentStart = i + 1;
+            break;
+          }
+
+          if (rpm >= targetRPM - tolerance && rpm <= targetRPM + tolerance) {
+            groupEnd = i;
+            const duration = parseFloat(csvData[groupEnd][headerMapping.time]) -
+                    parseFloat(csvData[groupStart][headerMapping.time]);
+
+            if (duration >= minDurationMs) {
+              log(`Found valid group: rows ${groupStart}-${groupEnd}, duration=${duration.toFixed(0)}ms`);
+              return {start: groupStart, end: groupEnd};
+            } else {
+              log(`Row ${i}: RPM=${rpm.toFixed(1)} (out of range), resetting`);
+              currentStart = i + 1;
+              break;
+            }
+          }
+        }
+
+        if (currentStart === groupStart) {
+          currentStart = csvData.length;
+        }
+      }
+
+      return null;
+    }
+
+    function calculateWindowAverages(startIdx, endIdx) {
+      const firstTime = parseFloat(csvData[startIdx][headerMapping.time]);
+      const lastTime = parseFloat(csvData[endIdx][headerMapping.time]);
+      const totalDuration = lastTime - firstTime;
+
+      if (totalDuration < 30000) {
+        log(`Duration ${totalDuration.toFixed(0)}ms < 30000ms required`);
+        return null;
+      }
+
+      const midpoint = firstTime + (totalDuration / 2);
+      const startWindow = midpoint - 7500;
+      const endWindow = midpoint + 7500;
+
+      log(`Midpoint: ${midpoint.toFixed(0)}ms, Window: ${startWindow.toFixed(0)}-${endWindow.toFixed(0)}ms`);
+
+      let windowStart = null;
+      let windowEnd = null;
+
+      for (let i = startIdx; i <= endIdx; i++) {
+        const timeVal = parseFloat(csvData[i][headerMapping.time]);
+        if (windowStart === null && timeVal >= startWindow) {
+          windowStart = i;
+        }
+        if (timeVal <= endWindow) {
+          windowEnd = i;
+        }
+      }
+
+      log(`Calculating averages for rows ${windowStart}-${windowEnd}`);
+
+      let sumBank1 = 0;
+      let sumBank2 = 0;
+      let count = 0;
+
+      for (let i = windowStart; i <= windowEnd; i++) {
+        const row = csvData[i];
+        const shrt1 = parseFloat(row[headerMapping.shrtft1]);
+        const long1 = parseFloat(row[headerMapping.longft1]);
+        const shrt2 = parseFloat(row[headerMapping.shrtft2]);
+        const long2 = parseFloat(row[headerMapping.longft2]);
+
+        if (!isNaN(shrt1) && !isNaN(long1) && !isNaN(shrt2) && !isNaN(long2)) {
+          sumBank1 += (shrt1 + long1);
+          sumBank2 += (shrt2 + long2);
+          count++;
+        }
+      }
+
+      if (count === 0) {
+        log('ERROR: No valid data in 15-second window');
+        return null;
+      }
+
+      return {
+        bank1: sumBank1 / count,
+        bank2: sumBank2 / count
+      };
+    }
+
+    function analyze() {
+      clearResults();
+      const resultsDiv = document.getElementById('results');
+      const resultsContainer = document.getElementById('resultsContainer');
+
+      const idleRPM = parseInt(document.getElementById('idleRPM').value);
+      const idleTolerance = parseInt(document.getElementById('idleTolerance').value);
+      const highRPM = parseInt(document.getElementById('highRPM').value);
+      const highTolerance = parseInt(document.getElementById('highTolerance').value);
+      const threshold = parseFloat(document.getElementById('threshold').value);
+
+      log(`Configuration: Idle=${idleRPM}±${idleTolerance}, High=${highRPM}±${highTolerance}, Threshold=${threshold}%`);
+
+      const idleGroup = findRPMGroup(idleRPM, idleTolerance, 30000);
+      if (!idleGroup) {
+        resultsDiv.textContent = `No valid 30+ second period found at ${idleRPM}±${idleTolerance} RPM`;
+        resultsContainer.style.display = 'block';
+        return;
+      }
+
+      const idleAvg = calculateWindowAverages(idleGroup.start, idleGroup.end);
+      if (!idleAvg) {
+        resultsDiv.textContent = 'Error calculating idle averages';
+        resultsContainer.style.display = 'block';
+        return;
+      }
+
+      const highGroup = findRPMGroup(highRPM, highTolerance, 30000);
+      if (!highGroup) {
+        resultsDiv.textContent = `${idleRPM} RPM\n`;
+        resultsDiv.textContent += ` AverageTotalFuelTrimBank1: ${idleAvg.bank1.toFixed(2)}\n`;
+        resultsDiv.textContent += ` AverageTotalFuelTrimBank2: ${idleAvg.bank2.toFixed(2)}\n\n`;
+        resultsDiv.textContent += `No valid 30+ second period found at ${highRPM}±${highTolerance} RPM`;
+        resultsContainer.style.display = 'block';
+        return;
+      }
+
+      const highAvg = calculateWindowAverages(highGroup.start, highGroup.end);
+      if (!highAvg) {
+        resultsDiv.textContent = 'Error calculating high RPM averages';
+        resultsContainer.style.display = 'block';
+        return;
+      }
+
+      const bank1Diff = Math.abs(highAvg.bank1 - idleAvg.bank1);
+      const bank2Diff = Math.abs(highAvg.bank2 - idleAvg.bank2);
+      const bank1Threshold = Math.abs(idleAvg.bank1) * (threshold / 100);
+      const bank2Threshold = Math.abs(idleAvg.bank2) * (threshold / 100);
+      const bank1Leak = bank1Diff > bank1Threshold;
+      const bank2Leak = bank2Diff > bank2Threshold;
+
+      let results = `${idleRPM} RPM\n`;
+      results += ` AverageTotalFuelTrimBank1: ${idleAvg.bank1.toFixed(2)}\n`;
+      results += ` AverageTotalFuelTrimBank2: ${idleAvg.bank2.toFixed(2)}\n\n`;
+
+      results += `${highRPM} RPM\n`;
+      results += ` AverageTotalFuelTrimBank1: ${highAvg.bank1.toFixed(2)}\n`;
+      results += ` AverageTotalFuelTrimBank2: ${highAvg.bank2.toFixed(2)}\n\n`;
+
+      results += `=== VACUUM LEAK ANALYSIS ===\n`;
+      results += `Bank1: Difference=${bank1Diff.toFixed(2)}, Threshold=${bank1Threshold.toFixed(2)}, `;
+      results += bank1Leak ? 'Leak Indicated\n' : 'No Leak\n';
+      results += `Bank2: Difference=${bank2Diff.toFixed(2)}, Threshold=${bank2Threshold.toFixed(2)}, `;
+      results += bank2Leak ? 'Leak Indicated' : 'No Leak';
+
+      resultsDiv.textContent = results;
+      resultsContainer.style.display = 'block';
+
+      if (bank1Leak || bank2Leak) {
+        resultsDiv.style.borderLeft = '5px solid #dc3545';
+      } else {
+        resultsDiv.style.borderLeft = '5px solid #28a745';
+      }
+    }
+  </script>
+</body>
+
+</html>
