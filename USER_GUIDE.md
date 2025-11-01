@@ -4,7 +4,7 @@ A web-based tool for analyzing automotive vacuum leaks using fuel trim data from
 
 ## Live Demo
 
-Access the tool at: `https://[your-username].github.io/[repo-name]/`
+Access the tool at: `https://jason-costello.github.io/vacuum-leak-analyzer`
 
 ## Overview
 
