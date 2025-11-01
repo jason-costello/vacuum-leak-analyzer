@@ -20,4 +20,4 @@ profile:
 #plugins:
 #  - id: <plugin.id> #(plugin id can be found at https://plugins.jetbrains.com)
 #Specify Qodana linter for analysis (Applied in CI/CD pipeline)
-linter: jetbrains/qodana-js:latest # Use the specific linter for JavaScript/HTML
+linter: jetbrains/qodana-js:2025.2 # Use the specific linter for JavaScript/HTML
